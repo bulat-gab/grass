@@ -67,7 +67,7 @@ async def connect_to_wss(socks5_proxy, user_id):
 
 
 async def main():
-    _user_id = 'ВМЕСТО ЭТОГО ТЕКСТА УКАЖИТЕ ТУТ ИДЕНТИФИКАТОР ВАШЕГО ПОЛЬЗОВАТЕЛЯ'
+    _user_id = 'Add UserID'
     socks5_proxy_list = [
         'socks5://user:password@ip:port',
     ]
