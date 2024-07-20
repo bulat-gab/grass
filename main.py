@@ -15,7 +15,9 @@ async def connect_to_wss(socks5_proxy, user_id):
         try:
             await asyncio.sleep(random.randint(1, 10) / 10)
             custom_headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+                # "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+                # "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36" # New User Agent
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" # New User Agent
             }
             ssl_context = ssl.create_default_context()
             ssl_context.check_hostname = False
@@ -67,10 +69,11 @@ async def connect_to_wss(socks5_proxy, user_id):
 
 
 async def main():
-    _user_id = 'ВМЕСТО ЭТОГО ТЕКСТА УКАЖИТЕ ТУТ ИДЕНТИФИКАТОР ВАШЕГО ПОЛЬЗОВАТЕЛЯ'
+    _user_id = 'UserID' # grass Account
     socks5_proxy_list = [
-        'socks5://user:password@ip:port',
+        'socks5://urlqrhsv:3ag312303f1m@IP:Port',
     ]
+
     tasks = [asyncio.ensure_future(connect_to_wss(i, _user_id)) for i in socks5_proxy_list]
     await asyncio.gather(*tasks)
 
