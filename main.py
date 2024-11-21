@@ -37,11 +37,11 @@ def bot_info(name: str = ""):
 
 
 async def worker_task(_id, account: str, proxy: str = None, wallet: str = None, db: AccountsDB = None):
-    consumables = account.split(":")[:3]
+    consumables = account.split(" 🚀 ")[:3]
     imap_pass = None
 
     if SINGLE_IMAP_ACCOUNT:
-        consumables.append(SINGLE_IMAP_ACCOUNT.split(":")[1])
+        consumables.append(SINGLE_IMAP_ACCOUNT.split(" 🚀 ")[1])
 
     if len(consumables) == 1:
         email = consumables[0]
@@ -137,7 +137,7 @@ async def main():
     await db.connect()
 
     for i, account in enumerate(accounts):
-        account = account.split(":")[0]
+        account = account.split(" 🚀 ")[0]
         proxy = proxies[i] if len(proxies) > i else None
 
         if await db.proxies_exist(proxy) or not proxy:
@@ -167,9 +167,8 @@ async def main():
             elif len(wallets) != len(accounts):
                 logger.error("Wallets count != accounts count")
                 return
-        elif len(accounts[0].split(":")) != 3:
-            logger.error(
-                "For __APPROVE__ mode: Need to provide email, password and imap password - email:password:imap_password")
+        elif len(accounts[0].split(" 🚀 ")) != 3:
+            logger.error("For __APPROVE__ mode: Need to provide email, password and imap password - email 🚀 password 🚀 imap_password")
             return
 
         msg = "__APPROVE__ MODE"
