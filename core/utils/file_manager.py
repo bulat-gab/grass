@@ -4,7 +4,7 @@ from typing import Optional
 def file_to_list(
         filename: str
 ):
-    with open(filename, 'r+') as f:
+    with open(filename, 'r+', encoding="utf-8") as f:
         return list(filter(bool, f.read().splitlines()))
 
 
