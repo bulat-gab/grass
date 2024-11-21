@@ -54,7 +54,7 @@ class FailureCounter:
         self.fail_count = self.limit
 
     async def delay_with_log(self, msg: str, sleep_time: int = random.randint(5, 10) * 60):
-        logger.info(msg)
+        logger.info(msg + f" | Sleep for {sleep_time} seconds")
         await asyncio.sleep(sleep_time)
 
     def log_global_count(self, is_work: bool = False):
