@@ -2,7 +2,7 @@ import asyncio
 import captchatools
 import importlib
 import data.config
-
+from data.config import settings
 
 class CaptchaService:
     def __init__(self):
@@ -12,11 +12,11 @@ class CaptchaService:
         importlib.reload(data.config)
         
         return {
-            "2captcha": data.config.TWO_CAPTCHA_API_KEY,
-            "anticaptcha": data.config.ANTICAPTCHA_API_KEY,
-            "capmonster": data.config.CAPMONSTER_API_KEY,
-            "capsolver": data.config.CAPSOLVER_API_KEY,
-            "captchaai": data.config.CAPTCHAAI_API_KEY,
+            "2captcha": settings.TWO_CAPTCHA_API_KEY,
+            "anticaptcha": settings.ANTICAPTCHA_API_KEY,
+            "capmonster": settings.CAPMONSTER_API_KEY,
+            "capsolver": settings.CAPSOLVER_API_KEY,
+            "captchaai": settings.CAPTCHAAI_API_KEY,
         }
 
     def get_captcha_token(self):
