@@ -111,11 +111,12 @@ class Grass(GrassWs, GrassRest, FailureCounter):
                     await self.send_ping()
                     await self.send_pong()
 
+                    msg = f"{self.id} | {self.email} | Mined grass."
                     if SHOW_LOGS_RARELY:
                         if not (i % 10):
-                            logger.info(f"{self.id} | Mined grass.")
+                            logger.info(msg)
                     else:
-                        logger.info(f"{self.id} | Mined grass.")
+                        logger.info(msg)
 
                     if MIN_PROXY_SCORE and self.proxy_score is None:
                         await self.handle_proxy_score(MIN_PROXY_SCORE, browser_id)
@@ -123,7 +124,7 @@ class Grass(GrassWs, GrassRest, FailureCounter):
                     if CHECK_POINTS and not (i % 100):
                         points = await self.get_points_handler()
                         await self.db.update_or_create_point_stat(self.id, self.email, points)
-                        logger.info(f"{self.id} | Total points: {points}")
+                        logger.info(f"{self.id} | {self.email} | Total points: {points}")
                     # if not (i % 1000):
                     #     total_points = await self.db.get_total_points()
                     #     logger.info(f"Total points in database: {total_points or 0}")
