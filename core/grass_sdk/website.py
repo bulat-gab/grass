@@ -18,7 +18,7 @@ from core.utils.mail.mail import MailUtils
 from core.utils.session import BaseClient
 from solders.keypair import Keypair
 
-from data.config import SEMI_AUTOMATIC_APPROVE_LINK
+from data.config import settings
 
 
 class GrassRest(BaseClient):
@@ -300,7 +300,7 @@ Nonce: {timestamp}"""
     async def get_email_approve_token(self, imap_pass: str, email_subject: str) -> str:
         try:
             logger.info(f"{self.id} | {self.email} Getting email approve msg...")
-            if SEMI_AUTOMATIC_APPROVE_LINK:
+            if settings.SEMI_AUTOMATIC_APPROVE_LINK:
                 result = {'success': True,
                           'msg': input(f"Please, paste approve link from {self.email} and press Enter: ").strip()}
             else:
