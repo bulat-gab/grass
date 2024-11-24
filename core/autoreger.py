@@ -17,6 +17,10 @@ class AutoReger:
     @classmethod
     def get_accounts(cls, file_names: tuple, amount: int = None, auto_creation: tuple = None, with_id: bool = False,
                      static_extra: tuple = None):
+        """
+        amount - how many accounts to process
+        """
+
         consumables = [file_to_list(file_name) for file_name in file_names]
 
         if amount and consumables[0]:

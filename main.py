@@ -14,10 +14,10 @@ from better_proxy import Proxy
 from core import Grass
 from core.autoreger import AutoReger
 from core.utils import logger, file_to_list
-from core.utils.accounts_db import AccountsDB
 from core.utils.exception import EmailApproveLinkNotFoundException, LoginException, RegistrationException
 from core.utils.generate.person import Person
 from data.config import settings
+from data import database
 
 
 def bot_info(name: str = ""):
@@ -32,7 +32,7 @@ def bot_info(name: str = ""):
     )
 
 
-async def worker_task(_id, account: str, proxy: str = None, wallet: str = None, db: AccountsDB = None):
+async def worker_task(_id, account: str, proxy: str = None, wallet: str = None):
     consumables = account.split(" 🚀 ")[:3]
     imap_pass = None
     
@@ -50,14 +50,14 @@ async def worker_task(_id, account: str, proxy: str = None, wallet: str = None, 
     grass = None
 
     try:
-        grass = Grass(_id, email, password, proxy, db)
+        grass = Grass(_id, email, password, proxy)
 
         if settings.MINING_MODE:
             await asyncio.sleep(random.uniform(1, 2) * _id)
         else:
             await asyncio.sleep(random.uniform(*settings.REGISTER_DELAY))
         
-        logger.info(f"Starting #{_id} | {email} | {proxy}")
+        logger.info(f"Starting #{_id} | {email} | {proxy[-10:]}")
 
         if settings.REGISTER_ACCOUNT_ONLY:
             await grass.create_account()
@@ -121,31 +121,25 @@ async def main():
         return
 
     proxies = [Proxy.from_str(proxy).as_url for proxy in file_to_list(settings.PROXIES_FILE_PATH)]
+    if len(proxies) != len(accounts):
+        logger.error(f"Mismatch between number of accounts: '{len(account)}' and number of proxies: '{len(proxies)}'.")
+        return
 
-    #### delete DB if it exists to clean up
-    if os.path.exists(settings.PROXY_DB_PATH):
-        os.remove(settings.PROXY_DB_PATH)
 
-    db = AccountsDB(settings.PROXY_DB_PATH)
-    await db.connect()
+    await database.initialize_database()
+    await database.clean()
 
     for i, account in enumerate(accounts):
-        account = account.split(" 🚀 ")[0]
-        proxy = proxies[i] if len(proxies) > i else None
+        email = account.split(" 🚀 ")[0]
+        proxy = proxies[i]
+        await database.Account.add_account(email, proxy)
 
-        if await db.proxies_exist(proxy) or not proxy:
-            continue
-
-        await db.add_account(account, proxy)
-
-    await db.delete_all_from_extra_proxies()
-    await db.push_extra_proxies(proxies[len(accounts):])
+    # TODO: Handle extras proxies
+    # await database.ExtraProxy.push_extra_proxies(proxies[len(accounts):])
 
     autoreger = AutoReger.get_accounts(
         (settings.ACCOUNTS_FILE_PATH, settings.PROXIES_FILE_PATH, settings.WALLETS_FILE_PATH),
-        with_id=True,
-        static_extra=(db, )
-    )
+        with_id=True)
 
     threads = settings.THREADS
 
@@ -174,8 +168,6 @@ async def main():
     logger.info(msg)
 
     await autoreger.start(worker_task, threads)
-
-    await db.close_connection()
 
 
 if __name__ == "__main__":

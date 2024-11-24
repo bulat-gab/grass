@@ -13,24 +13,22 @@ from .grass_sdk.extension import GrassWs
 from .grass_sdk.website import GrassRest
 from .utils import logger
 
-from .utils.accounts_db import AccountsDB
 from .utils.error_helper import raise_error, FailureCounter
 from .utils.exception import WebsocketClosedException, LowProxyScoreException, ProxyScoreNotFoundException, \
     ProxyForbiddenException, ProxyError, WebsocketConnectionFailedError, FailureLimitReachedException, \
     NoProxiesException, ProxyBlockedException, SiteIsDownException, LoginException
 from better_proxy import Proxy
 
+from data import database
 
 class Grass(GrassWs, GrassRest, FailureCounter):
     # global_fail_counter = 0
 
-    def __init__(self, _id: int, email: str, password: str, proxy: str = None, db: AccountsDB = None):
+    def __init__(self, _id: int, email: str, password: str, proxy: str = None):
         self.proxy = Proxy.from_str(proxy).as_url if proxy else None
         super(GrassWs, self).__init__(email=email, password=password, user_agent=UserAgent().random, proxy=self.proxy)
         self.proxy_score: Optional[int] = None
         self.id: int = _id
-
-        self.db: AccountsDB = db
 
         self.session: aiohttp.ClientSession = aiohttp.ClientSession(trust_env=True,
                                                                     connector=aiohttp.TCPConnector(ssl=False))
@@ -42,19 +40,33 @@ class Grass(GrassWs, GrassRest, FailureCounter):
         self.limit = 7
 
     async def start(self):
-        if self.db:
-            self.proxies = await self.db.get_proxies_by_email(self.email)
+        self.proxies = await database.Account.get_proxies_by_email(self.email)
+
         self.log_global_count(True)
         # logger.info(f"{self.id} | {self.email} | Starting...")
         while True:
             try:
                 Grass.is_site_down()
-
-                user_id = await self.enter_account()
-
                 browser_id = str(uuid.uuid3(uuid.NAMESPACE_DNS, self.proxy or ""))
+                
+                login_data = await database.LoginData.get_login_data(email=self.email, browser_id=browser_id)
+                if login_data:
+                    logger.info(f"{self.id} | {self.email} | Using existing session")
+                    self.set_access_token(login_data.access_token)
+                    user_id = login_data.user_id
+                else:
+                    logger.info(f"{self.id} | {self.email} | Create new session.")
+                    login_response = await self.enter_account()
+                    user_id = login_response['userId']
+                    await database.LoginData.add(email=self.email, user_id=user_id,\
+                                                 browser_id=browser_id, access_token=login_response['accessToken'])
 
                 await self.run(browser_id, user_id)
+            # except ProxyScoreNotFoundException as e:
+            #     self.proxies.remove(self.proxy)
+            #     msg = "Proxy score not found"
+            #     sleep_time = 30 * 60
+            #     await self.reset_with_delay(f"{self.id} | {msg}. Try again after {sleep_time} seconds ...", sleep_time)
             except LoginException as e:
                 logger.warning(f"LoginException | {self.id} | {e}")
                 return False
@@ -81,22 +93,24 @@ class Grass(GrassWs, GrassRest, FailureCounter):
                 is_raise=False,
             )
 
-            await self.change_proxy()
-            logger.info(f"{self.id} | Changed proxy to {self.proxy}. {msg}. Retrying...")
+            # await self.change_proxy()
+            # logger.info(f"{self.id} | Changed proxy to {self.proxy}. {msg}. Retrying...")
 
             await asyncio.sleep(random.uniform(20, 21))
 
     async def run(self, browser_id: str, user_id: str):
         while True:
             try:
+                logger.success(f"{self.id} | {self.email} | Start mining")
+
                 await self.connection_handler()
                 await self.auth_to_extension(browser_id, user_id)
 
                 if self.proxy_score is None:
                     await asyncio.sleep(1)
 
-                    if settings.MIN_PROXY_SCORE:
-                        await self.handle_proxy_score(settings.MIN_PROXY_SCORE)
+                if settings.MIN_PROXY_SCORE:
+                    await self.handle_proxy_score(settings.MIN_PROXY_SCORE)
 
                 for i in range(10 ** 9):
                     await self.send_ping()
@@ -111,11 +125,12 @@ class Grass(GrassWs, GrassRest, FailureCounter):
 
                     if settings.CHECK_POINTS and not (i % 100):
                         points = await self.get_points_handler()
-                        await self.db.update_or_create_point_stat(self.id, self.email, points)
+                        await database.PointStats.update_or_create_point_stat(self.id, self.email, points)
                         logger.info(f"{self.id} | {self.email} | Total points: {points}")
-                    # if not (i % 1000):
-                    #     total_points = await self.db.get_total_points()
-                    #     logger.info(f"Total points in database: {total_points or 0}")
+
+                    if not (i % 1000):
+                        total_points = await database.PointStats.get_total_points()
+                        logger.info(f"Total points in database: {total_points or 0}")
                     if i:
                         self.fail_reset()
 
@@ -151,13 +166,13 @@ class Grass(GrassWs, GrassRest, FailureCounter):
 
     @retry(stop=stop_after_attempt(5),
            retry=retry_if_not_exception_type(LowProxyScoreException),
-           before_sleep=lambda retry_state, **kwargs: logger.info(f"{retry_state.outcome.exception()}"),
+           before_sleep=lambda retry_state, **kwargs: logger.warning(f"{retry_state.outcome.exception()}"),
            wait=wait_random(5, 7),
            reraise=True)
     async def handle_proxy_score(self, min_score: int):
-        if (proxy_score := await self.get_proxy_score_by_device_id_handler()) is None:
-            # logger.info(f"{self.id} | Proxy score not found for {self.proxy}. Guess Bad proxies! Continue...")
-            # return None
+        proxy_score = await self.get_proxy_score_by_device_id_handler()
+
+        if proxy_score is None:
             raise ProxyScoreNotFoundException(f"{self.id} | Proxy score not found! Retrying...")
         elif proxy_score >= min_score:
             self.proxy_score = proxy_score
@@ -178,6 +193,7 @@ class Grass(GrassWs, GrassRest, FailureCounter):
                             self.proxies.insert(0, proxy)
                             break
                     else:
+                        await database.Account.add_account(self.email, proxy)
                         await self.db.add_account(self.email, proxy)
                         self.proxies.insert(0, proxy)
                         break
@@ -186,16 +202,16 @@ class Grass(GrassWs, GrassRest, FailureCounter):
 
         return await self.next_proxy()
 
-    async def next_proxy(self):
-        if not self.proxies:
-            await self.reset_with_delay(f"{self.id} | No proxies left. Use same proxy...", 30 * 60)
-            return self.proxy
-            # raise NoProxiesException(f"{self.id} | No proxies left. Exiting...")
+    # async def next_proxy(self):
+    #     if not self.proxies:
+    #         await self.reset_with_delay(f"{self.id} | No proxies left. Use same proxy...", 30 * 60)
+    #         return self.proxy
+    #         # raise NoProxiesException(f"{self.id} | No proxies left. Exiting...")
 
-        proxy = self.proxies.pop(0)
-        self.proxies.append(proxy)
+    #     proxy = self.proxies.pop(0)
+    #     self.proxies.append(proxy)
 
-        return proxy
+    #     return proxy
 
     @staticmethod
     def is_site_down():

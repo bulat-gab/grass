@@ -67,11 +67,15 @@ class GrassRest(BaseClient):
 
         return await response.json()
 
-    async def enter_account(self):
-        res_json = await self.handle_login()
-        self.website_headers['Authorization'] = res_json['result']['data']['accessToken']
+    def set_access_token(self, access_token: str):
+        self.website_headers['Authorization'] = access_token
 
-        return res_json['result']['data']['userId']
+    async def enter_account(self) -> dict:
+        res_json = await self.handle_login()
+
+        data = res_json['result']['data']
+        self.set_access_token(data['accessToken'])
+        return data
 
     @retry(stop=stop_after_attempt(3),
            before_sleep=lambda retry_state, **kwargs: logger.info(f"Retrying... {retry_state.outcome.exception()}"),
@@ -158,8 +162,6 @@ class GrassRest(BaseClient):
 
         response = await self.session.post(url, headers=self.website_headers, data=json.dumps(json_data),
                                            proxy=self.proxy)
-        logger.debug(f"{self.id} | Login response: {await response.text()}")
-
         try:
             res_json = await response.json()
             if res_json.get("error") is not None:
