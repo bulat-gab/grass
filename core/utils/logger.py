@@ -36,6 +36,9 @@ def logging_setup(gui_mode=False, text_edit=None):
 
         logger.add(sys.stdout, colorize=True,
                    format=format_info, level="INFO")
+        
+        logger.add(file_path + f"out_{date.today().strftime('%m-%d')}.log",
+               format=format_info, level="DEBUG")
 
 
 def clean_brackets(raw_str):
