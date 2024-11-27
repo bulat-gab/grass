@@ -19,6 +19,7 @@ from core.utils.accounts_db import AccountsDB
 from core.utils.exception import EmailApproveLinkNotFoundException, LoginException, RegistrationException
 from core.utils.generate.person import Person
 from data.config import settings
+from data import database
 
 
 def bot_info(name: str = ""):
@@ -130,8 +131,13 @@ async def main():
     if os.path.exists(settings.PROXY_DB_PATH):
         os.remove(settings.PROXY_DB_PATH)
 
+    db_path = "do_not_commit.data/grass_db.sqlite3"
+    if os.path.exists(db_path):
+        os.remove(db_path)
+
     db = AccountsDB(settings.PROXY_DB_PATH)
     await db.connect()
+    await database.initialize_database()
 
     for i, account in enumerate(accounts):
         account = account.split(" 🚀 ")[0]
@@ -141,9 +147,14 @@ async def main():
             continue
 
         await db.add_account(account, proxy)
+        await database.User.add(email=account)
+        await database.Proxy.add(url=proxy)
+        await database.Device.add(account, proxy)
 
     await db.delete_all_from_extra_proxies()
     await db.push_extra_proxies(proxies[len(accounts):])
+    for p in proxies[len(accounts):]:
+        await database.Proxy.add(url=proxy)
 
     autoreger = AutoReger.get_accounts(
         (settings.ACCOUNTS_FILE_PATH, settings.PROXIES_FILE_PATH, settings.WALLETS_FILE_PATH),
