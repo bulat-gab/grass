@@ -18,7 +18,7 @@ def logging_setup():
                format=format_info, level="DEBUG")
 
     logger.add(sys.stdout, colorize=True,
-               format=format_info, level="INFO")
+               format=format_info, level="DEBUG")
 
 
 def clean_brackets(raw_str):
