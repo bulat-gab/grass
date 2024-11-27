@@ -107,12 +107,12 @@ class Grass(GrassWs, GrassRest, FailureCounter):
 
                     msg = f"{self.id} | {self.email} | Mined grass."
                     if settings.SHOW_LOGS_RARELY:
-                        if not (i % 10):
+                        if i % 10 == 0:
                             logger.info(msg)
                     else:
                         logger.info(msg)
 
-                    if settings.CHECK_POINTS and not (i % 100):
+                    if settings.CHECK_POINTS and i % 100 == 0:
                         points = await self.get_points_handler()
                         await self.db.update_or_create_point_stat(self.id, self.email, points)
                         logger.info(f"{self.id} | {self.email} | Total points: {points}")

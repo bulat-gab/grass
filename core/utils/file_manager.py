@@ -11,13 +11,14 @@ def file_to_list(
 def str_to_file(file_name: str, msg: str, mode: Optional[str] = "a"):
     with open(
             file_name,
-            mode
+            mode,
+            encoding="UTF8"
     ) as text_file:
         text_file.write(f"{msg}\n")
 
 
 def shift_file(file):
-    with open(file, 'r+') as f:  # open file in read / write mode
+    with open(file, 'r+', encoding="UTF8") as f:  # open file in read / write mode
         first_line = f.readline()  # read the first line and throw it out
         data = f.read()  # read the rest
         f.seek(0)  # set the cursor to the top of the file

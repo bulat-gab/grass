@@ -15,7 +15,7 @@ def logging_setup():
     logger.remove()
 
     logger.add(file_path + f"out_{date.today().strftime('%m-%d')}.log",
-               format=format_info)
+               format=format_info, level="DEBUG")
 
     logger.add(sys.stdout, colorize=True,
                format=format_info, level="INFO")
