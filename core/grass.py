@@ -63,6 +63,7 @@ class Grass(GrassWs, GrassRest, FailureCounter):
                 msg = "Proxy forbidden"
             except ProxyError:
                 msg = "Low proxy score"
+                self.proxies.remove(self.proxy)
             except WebsocketConnectionFailedError:
                 msg = "Websocket connection failed"
                 self.reach_fail_limit()
