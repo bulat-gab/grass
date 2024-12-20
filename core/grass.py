@@ -7,12 +7,7 @@ import aiohttp
 from fake_useragent import UserAgent
 from tenacity import stop_after_attempt, retry, retry_if_not_exception_type, wait_random, retry_if_exception_type
 
-from data.config import MIN_PROXY_SCORE, CHECK_POINTS, STOP_ACCOUNTS_WHEN_SITE_IS_DOWN, NODE_TYPE
-
-try:
-    from data.config import SHOW_LOGS_RARELY
-except ImportError:
-    SHOW_LOGS_RARELY = ""
+from data.config import settings
 
 from .grass_sdk.extension import GrassWs
 from .grass_sdk.website import GrassRest
@@ -98,13 +93,13 @@ class Grass(GrassWs, GrassRest, FailureCounter):
 
                 await self.auth_to_extension(browser_id, user_id)
 
-                if NODE_TYPE != "2x":
+                if settings.NODE_TYPE != "2x":
                     await self.handle_http_request_action()
 
                 for i in range(10 ** 9):
-                    if MIN_PROXY_SCORE and self.proxy_score is None:
+                    if settings.MIN_PROXY_SCORE and self.proxy_score is None:
                         if i < 3:
-                            await self.handle_proxy_score(MIN_PROXY_SCORE, browser_id)
+                            await self.handle_proxy_score(settings.MIN_PROXY_SCORE, browser_id)
                         else:
                             raise ProxyScoreNotFoundException("Proxy score not found")
 
@@ -112,16 +107,16 @@ class Grass(GrassWs, GrassRest, FailureCounter):
                     await self.send_pong()
 
                     msg = f"{self.id} | {self.email} | Mined grass."
-                    if SHOW_LOGS_RARELY:
+                    if settings.SHOW_LOGS_RARELY:
                         if not (i % 10):
                             logger.info(msg)
                     else:
                         logger.info(msg)
 
-                    if MIN_PROXY_SCORE and self.proxy_score is None:
-                        await self.handle_proxy_score(MIN_PROXY_SCORE, browser_id)
+                    if settings.MIN_PROXY_SCORE and self.proxy_score is None:
+                        await self.handle_proxy_score(settings.MIN_PROXY_SCORE, browser_id)
 
-                    if CHECK_POINTS and not (i % 100):
+                    if settings.CHECK_POINTS and not (i % 100):
                         points = await self.get_points_handler()
                         await self.db.update_or_create_point_stat(self.id, self.email, points)
                         logger.info(f"{self.id} | {self.email} | Total points: {points}")
@@ -216,6 +211,6 @@ class Grass(GrassWs, GrassRest, FailureCounter):
 
     @staticmethod
     def is_site_down():
-        if STOP_ACCOUNTS_WHEN_SITE_IS_DOWN and Grass.is_global_error():
+        if settings.STOP_ACCOUNTS_WHEN_SITE_IS_DOWN and Grass.is_global_error():
             logger.info(f"Site is down. Sleeping for non-working accounts...")
             raise SiteIsDownException()
