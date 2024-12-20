@@ -12,7 +12,7 @@ from core.utils.exception import WebsocketClosedException, ProxyForbiddenExcepti
 
 import os, base64
 
-from data.config import NODE_TYPE
+from data.config import settings
 
 
 class GrassWs:
@@ -87,11 +87,11 @@ class GrassWs:
             }
         }
 
-        if NODE_TYPE == "1_25x":
+        if settings.NODE_TYPE == "1_25x":
             message['result'].update({
                 "extension_id": "lkbnfiajjmbhnfledhphioinpickokdi",
             })
-        elif NODE_TYPE == "2x":
+        elif settings.NODE_TYPE == "2x":
             message['result'].update({
                 "device_type": "desktop",
                 "version": "4.30.0",
