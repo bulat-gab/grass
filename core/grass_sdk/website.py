@@ -361,7 +361,13 @@ Nonce: {timestamp}"""
         return await handler(lambda: self.get_proxy_score_via_device(browser_id))()
 
     async def get_proxy_score_via_device(self, device_id: str):
-        res_json = await self.get_device_info(device_id)
+        res_json: dict = await self.get_device_info(device_id)
+        error_response = res_json.get("error", {})
+
+        if error_response:
+            error_msg = error_response.get("message")
+            logger.error(f"{self.id} | Error get_proxy_score_via_device: {error_msg}")
+
         return res_json.get("result", {}).get("data", {}).get("ipScore", None)
 
     async def get_proxy_score_via_devices_by_device_handler(self):
